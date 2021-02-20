@@ -2,16 +2,28 @@ use image;
 use image::GenericImageView;
 use std::env;
 
+mod setting;
+use setting::Settings;
+
 fn main() {
     let mut args = env::args();
-    args.next().unwrap();
-    uncolored_img_to_ascii(&args.next().unwrap());
+    // TODO: This is ugly FIXME
+    let settings = match Settings::new(&mut args) {
+        Some(val) => val,
+        None => return,
+    };
+
+    uncolored_img_to_ascii(settings);
 }
 
-// This will change the color
-fn uncolored_img_to_ascii(x: &str) {
-    let img = image::open(x).unwrap();
+fn uncolored_img_to_ascii(x: Settings) {
+    let img = if let Ok(val) = image::open(x.image_file) {
+        val
+    } else {
+        return println!("Error: File Not Fount OR File Type Not Supported!");
+    };
 
+    //converting the image to greyscale
     let img = img
         .resize_exact(
             (img.width() / 9) as u32,
@@ -20,10 +32,10 @@ fn uncolored_img_to_ascii(x: &str) {
         )
         .grayscale();
 
+    //loop on every pixel in y and x of the image and calculate the brightness.
     for y in 0..img.height() {
         for x in 0..img.width() {
             let [a, b, c, _] = img.get_pixel(x, y).0;
-
             print_char(get_brightness(a, b, c));
         }
         println!();
@@ -71,6 +83,7 @@ fn print_char(x: u16) {
     // }
 }
 
+// calculate RGB values to get brightness of the pixel
 fn get_brightness(a: u8, b: u8, c: u8) -> u16 {
     ((a as u16 + b as u16 + c as u16) / 3) as u16
 }
