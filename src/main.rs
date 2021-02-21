@@ -26,8 +26,8 @@ fn uncolored_img_to_ascii(x: Settings) {
     //converting the image to greyscale
     let img = img
         .resize_exact(
-            (img.width() / 9) as u32,
-            (img.height() / 16) as u32,
+            (img.width() / x.image_size) as u32,
+            (img.height() / (x.image_size * 2) as u32) as u32,
             image::imageops::FilterType::Nearest,
         )
         .grayscale();
@@ -35,55 +35,29 @@ fn uncolored_img_to_ascii(x: Settings) {
     //loop on every pixel in y and x of the image and calculate the brightness.
     for y in 0..img.height() {
         for x in 0..img.width() {
-            let [a, b, c, _] = img.get_pixel(x, y).0;
-            print_char(get_brightness(a, b, c));
+            let [r, g, b, _] = img.get_pixel(x, y).0;
+            print_char(get_luminance(r, g, b));
         }
         println!();
     }
     println!();
 }
 
-fn print_char(x: u16) {
-    //NOTE: im lazy asshole, i need to orginize the table, because the commented ugly 'match' below gives better details.
+fn print_char(lumi: f32) {
+    // TODO: Move this to Settings module and accept a character array from the user.
     let table = [
         ' ', '.', ',', ':', ';', '\'', '"', '<', '>', 'i', '!', '(', ')', '[', ']', '(', ')', '{',
         '}', '*', '8', 'B', '%', '$', '#', '@',
     ];
-    print!(
-        "{}",
-        table[(x as usize / ((255 * 4) as usize / table.len() - 1)) as usize]
-    );
-
-    // match x {
-    //     0..=10 => print!(" "),
-    //     11..=20 => print!("."),
-    //     21..=30 => print!(","),
-    //     31..=40 => print!(":"),
-    //     41..=50 => print!("_"),
-    //     51..=60 => print!("-"),
-    //     61..=70 => print!(";"),
-    //     71..=80 => print!(":"),
-    //     81..=90 => print!("!"),
-    //     91..=100 => print!("i"),
-    //     101..=110 => print!("("),
-    //     111..=120 => print!(")"),
-    //     121..=130 => print!("{{"),
-    //     131..=140 => print!("}}"),
-    //     141..=150 => print!("*"),
-    //     151..=160 => print!("J"),
-    //     161..=170 => print!("L"),
-    //     171..=180 => print!("M"),
-    //     181..=190 => print!("K"),
-    //     191..=200 => print!("E"),
-    //     201..=210 => print!("R"),
-    //     211..=220 => print!("H"),
-    //     221..=230 => print!("$"),
-    //     231..=240 => print!("8"),
-    //     _ => print!("@"),
-    // }
+    print!("{}", table[(lumi * (table.len() - 1) as f32) as usize]);
 }
 
+// luminance formula credits: https://stackoverflow.com/a/596243
+// >>> Luminance = 0.2126*R + 0.7152*G + 0.0722*B <<<
 // calculate RGB values to get brightness of the pixel
-fn get_brightness(a: u8, b: u8, c: u8) -> u16 {
-    ((a as u16 + b as u16 + c as u16) / 3) as u16
+fn get_luminance(r: u8, g: u8, b: u8) -> f32 {
+    let r = 0.2126 * (r as f32);
+    let g = 0.7152 * (g as f32);
+    let b = 0.0722 * (b as f32);
+    (r + g + b) / 255.0
 }
