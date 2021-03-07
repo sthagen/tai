@@ -12,7 +12,7 @@ A tool to convert images to ascii art written in **Rust** 🦀
 
 
 ### Contributions
-All Contributions are welcome.
+contributions with code, issues, documentation are welcome.
 
 ### License
 [MIT](https://mit-license.org/)

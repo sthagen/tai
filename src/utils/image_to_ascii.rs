@@ -1,31 +1,20 @@
-use crate::common::get_greyscale_img;
 use crate::common::get_luminance;
-use crate::setting::{Settings, Style};
-use crate::utils::{floyd_dither::floyd_dither, image_to_onechar::img_to_onechar};
+use crate::common::greyscaled;
+use crate::config::Config;
+use crate::utils::floyd_dither::floyd_dither;
 
-pub fn img_to_ascii(config: Settings) {
-    let mut img = if let Some(val) = get_greyscale_img(&config) {
+// TODO: this is ugly, also not forgetting about the fact that it prints a char for every pixel i need to fix this soon!
+// img_to_ascii converts to ascii,numbers,blocks
+pub fn img_to_ascii(config: Config, table: &[char]) {
+    let mut img = if let Some(val) = greyscaled(&config) {
         val
     } else {
-        return println!("Error: File Not Fount OR File Type Not Supported!");
+        return eprintln!("Error: File Not Fount OR File Type Not Supported!");
     };
 
-    // FIXME IM UGLY.
-    let table = match config.style {
-        Style::OneChar => {
-            img_to_onechar(config);
-            return;
-        }
-        Style::Ascii => vec![
-            ' ', '.', ',', ':', ';', '\'', '"', '<', '>', 'i', '!', '(', ')', '[', ']', '(', ')',
-            '{', '}', '*', '8', 'B', '%', '$', '#', '@',
-        ],
-        Style::Numbers => vec![' ', '2', '7', '4', '1', '3', '9', '8', '5', '6', '0'],
-        Style::Blocks => vec![' ', '░', '▒', '▓', '█'],
+    if config.dither {
+        floyd_dither(&mut img);
     };
-
-    //TODO: make this optional!
-    floyd_dither(&mut img);
     // loop on every pixel in y and x of the image and calculate the luminance.
     for y in 0..img.height() {
         for x in 0..img.width() {
@@ -38,7 +27,7 @@ pub fn img_to_ascii(config: Settings) {
     println!();
 }
 
-// calculate and select a char from the table
+// decide which character to choose from the table(array);
 fn select_char(table: &[char], lumi: f32) {
     print!(
         "{}",
