@@ -1,6 +1,6 @@
 // TODO: Better argument parsing, maybe will use a library if arguments will become too much.
-
-const VERSION: &str = "0.0.1"; // program version
+use crate::common::print_usage;
+const VERSION: &str = "0.0.2"; // program version
 
 #[derive(Debug)]
 pub enum Style {
@@ -8,32 +8,40 @@ pub enum Style {
     Numbers,
     Blocks,
     OneChar,
+    Braille,
     // TODO:
-    // Braille,
+    // Colored,
 }
 
 #[derive(Debug)]
-pub struct Settings {
+pub struct Config {
     pub image_file: String,
-    pub image_size: u32,
+    pub scale: u32,
+    pub dither: bool,
+    pub threshold: u8,
     pub style: Style,
     pub onechar: char,
 }
-impl Settings {
+impl Config {
+    // FIXME IM UGLY
+    // Parsing arguments and return a valid config
     pub fn new(args: &mut std::env::Args) -> Option<Self> {
         let program_name = args.next().unwrap();
+        // defaults
         let image_file: String;
-        let mut image_size: u32 = 16;
-        let mut style: Style = Style::Ascii;
+        let mut dither: bool = false;
         let mut onechar: char = '█';
+        let mut scale: u32 = 2;
+        let mut style: Style = Style::Braille;
+        let mut threshold: u8 = 128;
 
         let args: Vec<String> = args.collect();
 
-        if args.len() < 1 {
+        if args.is_empty() {
             println!("try -h | --help option to show help!");
             return None;
         }
-
+        // loop on every argument givin
         for mut _i in 0..args.len() {
             match args[_i].as_str() {
                 "-h" | "--help" => {
@@ -46,13 +54,22 @@ impl Settings {
                     println!("{}-v{}", program_name, VERSION);
                     return None;
                 }
+                "-d" | "--dither" => {
+                    // modify the character when using the (--style onechar) flag;
+                    if _i == args.len() - 1 {
+                        print_usage(program_name);
+                        return None;
+                    };
+                    dither = true;
+                    _i += 1
+                }
                 "--onechar" => {
                     // modify the character when using the (--style onechar) flag;
                     if _i == args.len() - 1 {
                         print_usage(program_name);
                         return None;
                     };
-                    onechar = args[_i + 1].chars().nth(0).unwrap();
+                    onechar = args[_i + 1].chars().next().unwrap();
                     _i += 1
                 }
                 "-S" | "--style" => {
@@ -61,17 +78,26 @@ impl Settings {
                         print_usage(program_name);
                         return None;
                     };
-                    style = check_style(&args[_i + 1]);
+                    style = check_style_arg(&args[_i + 1]);
                     _i += 1
                 }
-
-                "-s" | "--size" => {
+                "-t" | "--threshold" => {
                     // size/scale
                     if _i == args.len() - 1 {
                         print_usage(program_name);
                         return None;
                     };
-                    image_size = args[_i + 1].parse().unwrap_or(image_size);
+                    threshold = args[_i + 1].parse().unwrap_or(threshold);
+                    _i += 1
+                }
+
+                "-s" | "--scale" => {
+                    // size/scale
+                    if _i == args.len() - 1 {
+                        print_usage(program_name);
+                        return None;
+                    };
+                    scale = args[_i + 1].parse().unwrap_or(scale);
                     _i += 1
                 }
                 _ => {
@@ -79,42 +105,33 @@ impl Settings {
                 }
             }
         }
+        //args loop ends here
 
-        if args[args.len() - 1].starts_with("-") {
+        if args[args.len() - 1].starts_with('-') {
             return None;
         };
 
         image_file = args.into_iter().last().unwrap();
 
+        //returning
         Some(Self {
             image_file,
-            image_size,
+            scale,
+            dither,
+            threshold,
             style,
             onechar,
         })
     }
 }
-pub fn print_usage(program_name: String) {
-    println!("USAGE: {} [OPTIONS] [IMAGE_FILE]", program_name);
-    println!();
-    println!("OPTIONS: ");
-    println!("\t -h | --help\t Show this help message");
-    println!("\t -s | --size\t Followed by a number to Resize the output (lower number means bigger output)");
-    println!("\t -S | --style\t Followed by one of: {{ascii, numbers, blocks, onechar}}");
-    println!("\t --onechar\t Followed by a character, This will modify the character when using (-S onechar)");
-    println!(
-        "\t -v | --version\t Print {}'s Version and exit!.",
-        program_name
-    );
-}
 
-fn check_style(arg: &String) -> Style {
-    match arg.as_str() {
+fn check_style_arg(arg: &str) -> Style {
+    match arg {
         "ascii" => Style::Ascii,
-        "numbers" => Style::Numbers,
         "blocks" => Style::Blocks,
+        "braille" => Style::Braille,
+        "numbers" => Style::Numbers,
         "onechar" => Style::OneChar,
-        _ => Style::Ascii,
-        //TODO
+        _ => Style::Braille, //this is just for the compiler to stop complaining
     }
 }
